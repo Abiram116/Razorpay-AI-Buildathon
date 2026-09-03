@@ -1,0 +1,4 @@
+[SYNTHETIC DEMO DOCUMENT - NOT A REAL RECORD]
+document_type: access_activity_log
+
+Platform access log: 14 separate logins between purchase date and dispute date; module 3 marked complete.

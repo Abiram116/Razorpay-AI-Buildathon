@@ -1,0 +1,32 @@
+# --- Secrets: NEVER commit ---
+.env
+.env.local
+*.pem
+*.key
+
+# --- Python ---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# --- Runtime artifacts ---
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+data/generated/*
+!data/generated/.gitkeep
+
+# --- OS / editor ---
+.DS_Store
+.idea/
+
+# Share the project's VS Code config; ignore per-user cruft.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json

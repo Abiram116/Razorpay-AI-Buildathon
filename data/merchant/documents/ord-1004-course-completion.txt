@@ -1,0 +1,4 @@
+[SYNTHETIC DEMO DOCUMENT - NOT A REAL RECORD]
+document_type: proof_of_service
+
+Course platform record showing 60% course completion under this account.

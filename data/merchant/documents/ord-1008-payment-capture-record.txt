@@ -1,0 +1,4 @@
+[SYNTHETIC DEMO DOCUMENT - NOT A REAL RECORD]
+document_type: billing_proof
+
+Razorpay payment record: status=captured, UPI Ref 402873115562, amount INR 849.00 - the debit that the customer's banking app displayed as failed in fact succeeded.

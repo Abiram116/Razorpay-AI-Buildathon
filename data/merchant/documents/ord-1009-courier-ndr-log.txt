@@ -1,0 +1,4 @@
+[SYNTHETIC DEMO DOCUMENT - NOT A REAL RECORD]
+document_type: shipping_proof
+
+Courier NDR (Non-Delivery Report) log: 3 delivery attempts logged on tracking XB88452209IN, each marked 'customer unreachable'; parcel returned to origin (RTO) after the third attempt. No independent confirmation the customer was actually contacted at the door.

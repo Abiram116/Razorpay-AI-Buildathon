@@ -1,0 +1,4 @@
+[SYNTHETIC DEMO DOCUMENT - NOT A REAL RECORD]
+document_type: shipping_proof
+
+Courier proof-of-delivery record for tracking DEL1234567: delivered and signed for at the shipping address.

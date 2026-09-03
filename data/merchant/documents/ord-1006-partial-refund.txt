@@ -1,0 +1,4 @@
+[SYNTHETIC DEMO DOCUMENT - NOT A REAL RECORD]
+document_type: refund_confirmation
+
+Partial refund of INR 389.70 (30% of order) processed for the damaged mouse pad component.

@@ -1,0 +1,4 @@
+[SYNTHETIC DEMO DOCUMENT - NOT A REAL RECORD]
+document_type: shipping_proof
+
+Courier scan log shows arrival at the Kochi city hub only. No last-mile delivery scan or recipient signature on file.

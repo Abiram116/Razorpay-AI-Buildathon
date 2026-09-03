@@ -1,0 +1,4 @@
+[SYNTHETIC DEMO DOCUMENT - NOT A REAL RECORD]
+document_type: refund_confirmation
+
+Refund confirmation: full amount (INR 4,599.00) refunded to original payment method, processed before any dispute.

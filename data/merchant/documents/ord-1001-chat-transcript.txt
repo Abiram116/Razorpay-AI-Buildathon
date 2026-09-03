@@ -1,0 +1,4 @@
+[SYNTHETIC DEMO DOCUMENT - NOT A REAL RECORD]
+document_type: customer_communication
+
+Support chat transcript in which the customer confirms receipt of the package.

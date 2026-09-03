@@ -1,0 +1,4 @@
+[SYNTHETIC DEMO DOCUMENT - NOT A REAL RECORD]
+document_type: explanation_letter
+
+Internal billing review: support ticket confirms the subscription was cancelled on the customer's request, but this order's charge timestamp is AFTER that cancellation - the merchant's own records do not support the charge.

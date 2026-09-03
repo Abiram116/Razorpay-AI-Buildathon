@@ -1,0 +1,42 @@
+{
+  // ---- Terminal: always open at the project root, venv pre-activated ----
+  "terminal.integrated.cwd": "${workspaceFolder}",
+  "python.terminal.activateEnvironment": true,
+  "python.terminal.activateEnvInCurrentTerminal": true,
+
+  // ---- Interpreter: the project venv ----
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+
+  // Belt-and-braces: even a terminal spawned before the Python extension
+  // activates lands in the venv with the project importable as `src.*`.
+  "terminal.integrated.env.linux": {
+    "VIRTUAL_ENV": "${workspaceFolder}/.venv",
+    "PATH": "${workspaceFolder}/.venv/bin:${env:PATH}",
+    "PYTHONPATH": "${workspaceFolder}"
+  },
+
+  // ---- Testing ----
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": ["tests"],
+
+  // ---- Editor hygiene ----
+  "editor.rulers": [88],
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "[python]": {
+    "editor.tabSize": 4,
+    "editor.formatOnSave": false
+  },
+
+  // Keep the tree readable; never surface secrets or build junk.
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/.pytest_cache": true
+  },
+  "search.exclude": {
+    ".venv": true,
+    "data/generated": true
+  }
+}

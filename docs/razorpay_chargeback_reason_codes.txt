@@ -1,0 +1,243 @@
+===PAGE 1===
+Chargeback Reason Codes
+Page 1 of 5 
+            
+ 
+Card Type Reason 
+Code  
+Reason Text Chargeback Category Preventable Reversible 
+MASTERCARD 4802 Requested/Required Item 
+Illegible or Missing 
+Request for 
+Information 
+YES YES 
+MASTERCARD 4803 Documentation received was 
+invalid/incomplete 
+Request for 
+Information 
+YES YES 
+MASTERCARD 4804 Duplicate Processing Processing Error NO YES 
+MASTERCARD 4807 Warning Bulletin File Authorization Error YES NO 
+MASTERCARD 4808 Requested/Required 
+Authorization Not Obtained 
+Authorization Error YES YES 
+MASTERCARD 4812 Account Number Not on File Authorization Error YES YES 
+MASTERCARD 4831 Transaction Amount? Processing Error NO YES 
+MASTERCARD 4834 Duplicate Processing Processing Error NO YES 
+MASTERCARD 4835 Card Not Valid or Expired Authorization Error YES YES 
+MASTERCARD 4837 No Cardholder Authorization Fraud NO YES 
+MASTERCARD 4840 Fraudulent Processing of 
+Transactions 
+Fraud NO YES 
+MASTERCARD 4841 Canceled Recurring 
+Transaction 
+Cancelled/Returned by 
+Cardholder 
+NO YES 
+MASTERCARD 4842 Late Presentment Processing Error YES NO 
+MASTERCARD 4846 Correct Transaction 
+Currency Code Not Provided 
+Processing Error NO NO 
+MASTERCARD 4847 Unauthorized transaction 
+exceed /f_loor limit 
+Processing Error YES NO 
+MASTERCARD 4849 Questionable Merchant 
+Activates 
+Fraud YES NO 
+MASTERCARD 4850 Credit Posted as a Purchase Processing Error NO YES 
+MASTERCARD 4853 Cardholder Dispute 
+Defective/ Not as Described 
+Cancelled/Returned by 
+Cardholder 
+NO YES 
+MASTERCARD 4854 Cardholder Dispute-Not 
+Elsewhere Classi/f_ied 
+Processing Error NO YES 
+MASTERCARD 4855 Non-Receipt of Merchandise Non-Receipt of Goods 
+or Services 
+NO YES 
+MASTERCARD 4857 Card-Activated Telephone 
+Transaction 
+Fraud NO YES 
+MASTERCARD 4859 Services Not Rendered Non-Receipt of Goods 
+or Services 
+NO YES 
+ 
+===PAGE 2===
+           
+ 
+ 
+ 
+Card Type Reason 
+Code 
+Reason Text Chargeback Category Preventable Reversible 
+MASTERCARD 4862 Counterfeit Transaction 
+Magnetic Stripe POS Fraud 
+Fraud NO YES 
+MASTERCARD 4863 Cardholder does not 
+recognize- Possible Fraud 
+Request for 
+Information 
+NO YES 
+MASTERCARD 4903 Documentation received was 
+invalid/incomplete 
+Other YES YES 
+MASTERCARD 4905 Invalid Acq Ref Data on 
+Second Presentment 
+Other NO YES 
+MASTERCARD 98 Good Faith Collection Other NO YES 
+MASTERCARD 99 Pre-Compliance Other NO YES 
+ 
+  
+Chargeback Reason Codes
+Page 2 of 5
+
+===PAGE 3===
+          
+ 
+Card Type Reason 
+Code 
+Reason Text Chargeback Category Preventable Reversible 
+VISA 
+ 
+30 Services Not Provided or 
+Merchandise Not 
+Received 
+Non-Receipt of Goods 
+or Services NO YES 
+VISA 41 Canceled Recurring 
+Transaction 
+Cancelled/Returned 
+by Cardholder 
+NO YES 
+VISA 53 Not as Described or 
+Defective 
+Merchandise 
+Cancelled/Returned 
+by Cardholder 
+NO YES 
+VISA 57 Fraudulent Multiple 
+Transactions 
+Fraud NO YES 
+VISA 60 Requested Copy Illegible 
+or 
+Invalid 
+Request for Information YES YES 
+VISA 62 Counterfeit Transaction Fraud NO YES 
+VISA 70 Card Recovery Bulletin or 
+Exception File 
+Authorization Error YES NO 
+VISA 71 Declined Authorization Authorization Error YES YES 
+VISA 72 Transaction Exceeds Floor 
+Limit 
+Authorization Error YES YES 
+VISA 73 Expired Card Authorization Error YES YES 
+VISA 74 Late Presentment Processing Error YES YES 
+VISA 75 Transaction Not 
+Recognized 
+Request for Information NO YES 
+VISA 76 Incorrect Curr or Tran 
+Code or 
+Dom Proc Violation 
+Processing Error NO YES 
+VISA 77 Non-Matching Account 
+Number 
+Authorization Error YES YES 
+VISA 78 Service Code Violation Processing Error YES YES 
+VISA 79 Requested Transaction 
+Receipt 
+Not Received 
+Request for Information YES NO 
+VISA 80 Incorrect Transaction 
+Amount or 
+Account Number 
+Processing Error YES YES 
+VISA 81 Fraud-Card Present 
+Environment 
+Fraud NO YES 
+  
+Chargeback Reason Codes
+Page 3 of 5
+
+===PAGE 4===
+           
+Card Type Reason 
+Code 
+Reason Text Chargeback Category Preventable Reversible  
+ 
+VISA 83 Fraud-Card Absent 
+Environment 
+Fraud NO YES 
+VISA 85 Credit Not Processed Cancelled/Returned 
+by Cardholder 
+NO YES 
+VISA 86 Paid by Other Means Processing Error NO YES 
+VISA 90 Non-Receipt of Cash or 
+Load 
+Tran Value at ATM/Load 
+Non-Receipt of Goods 
+or Services 
+NO YES 
+VISA 93 Risk Identi/f_ication 
+Services 
+Fraud NO NO 
+VISA 96 Transaction Exceed 
+Limited 
+Amount 
+Processing Error YES YES 
+VISA 97 Pre-
+Arbitration/Arbitration 
+Other NO YES 
+VISA 98 Good Faith Collection Other NO YES 
+VISA 99 Pre-Compliance Other NO YES 
+ 
+  
+Chargeback Reason Codes
+Page 4 of 5
+
+===PAGE 5===
+           
+ 
+Card Type Reason 
+Code 
+Reason Text Chargeback Category Preventable Reversible 
+AMEX A02  No Authorization Request for Information YES NO 
+AMEX C02 Credit not Processed Cancelled/Returned 
+by Cardholder 
+YES YES 
+AMEX FR2 Fraudulent Transaction Fraud NO NO 
+AMEX P08 Paid By Other Means Processing Error NO YES 
+AMEX P17 Debit Adjustment Request for Information YES NO 
+AMEX R01 Non Receipt of 
+Merchandise 
+Non-Receipt of Goods 
+or Services 
+NO YES 
+AMEX R03 Fraudulent Transaction Request for Information YES YES 
+AMEX R04 Not as Described or 
+Defective Merchandise 
+Cancelled/Returned 
+by Cardholder 
+YES YES 
+AMEX R13  Requested Transaction 
+Information Not Received 
+Request for Information YES NO 
+AMEX M01 Merchant Accepted 
+Chargeback 
+Request for Information NO NO 
+AMEX M04 Merchant Accepted 
+Chargeback 
+Cancelled/Returned 
+by Cardholder 
+NO NO 
+AMEX R14 Requested Transaction 
+Information Not Received 
+Request for Information NO NO 
+AMEX R17 Non Dispute Adjustment Request for Information YES NO 
+AMEX S01  Non Dispute Adjustment Request for Information NO NO 
+AMEX R12 Noti/f_ication Request for Information YES NO 
+AMEX R21 Non Dispute Adjustment Request for Information YES NO 
+ 
+Chargeback Reason Codes
+Page 5 of 5
+

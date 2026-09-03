@@ -1,0 +1,27 @@
+# --- Razorpay integration ---
+razorpay>=1.4.2
+
+# --- Core runtime ---
+python-dotenv>=1.0.1
+requests>=2.32.0
+pydantic>=2.9.0
+
+# --- AI investigation agent (Groq) ---
+groq>=0.11.0
+
+# --- Dashboard (Phase 6) ---
+streamlit>=1.39.0
+pandas>=2.2.0
+
+# --- Webhook receiver (Phase 2) ---
+fastapi>=0.115.0
+uvicorn>=0.32.0
+httpx>=0.27.0
+pyngrok>=7.2.0
+
+# --- Document generation (Phase 5) ---
+reportlab>=4.2.0
+
+# --- Tooling ---
+pytest>=8.3.0
+pypdf>=5.0.0
