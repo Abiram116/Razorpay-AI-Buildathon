@@ -110,6 +110,11 @@ non-secret tunable in the `TUNABLES` block at the top of `src/config.py`:
 
 `.env` is git-ignored (`.gitignore:2`).
 
+For the fastest path to a running demo, skip straight to `uv run run.py` (see
+the main [README](README.md)) - it seeds the demo data and launches the
+dashboard in one command. What follows here is the phase-by-phase detail
+underneath that.
+
 Verify the integration:
 
 ```bash
@@ -129,9 +134,9 @@ uv run scripts/verify_phase1.py
 | 5 | Evidence builder + document generation | **complete** |
 | 6 | Streamlit human-review dashboard | **complete** |
 | 7 | Contest draft → human submit | **complete** |
-| 8 | Held-out evaluation: precision/recall/F1 + financial impact | next |
-| 9 | Failure-mode demonstration | pending |
-| 10 | Polish | pending |
+| 8 | Held-out evaluation: precision/recall/F1 + financial impact | **complete** |
+| 9 | Failure-mode demonstration | **complete** |
+| 10 | Polish | **complete** |
 
 ## 7b. Dispute ingestion (Phase 2)
 
@@ -421,6 +426,126 @@ Three operations, deliberately separate (`src/contest_service.py`):
 - **The 1000-char limit is re-checked here too**, so an oversized summary
   cannot reach Razorpay by any route.
 
+## 7h. Evaluation harness (Phase 8)
+
+The measurement problem is constrained by one hard fact: Groq's free tier
+gives ~8,000 tokens/minute and each case costs ~2.5k, so a 200-case run takes
+over an hour regardless of how the loop is written. Anything that takes an
+hour gets interrupted, so the harness is built around surviving that.
+
+```
+generate dataset (deterministic, in Python - no API calls)
+   → stratified dev/holdout split
+   → pace request under the token budget BEFORE sending
+   → investigate() (the same pure function the dashboard uses)
+   → commit result immediately  ← this is the checkpoint
+   → resume skips anything already committed
+   → metrics + financial impact, persisted
+```
+
+- **The dataset is generated in Python, never by an LLM.** Generating 200
+  cases through Groq would burn the exact budget the evaluation needs, and if
+  a model writes the case *and* a model grades it, the ground truth is only as
+  good as the generator. Here the facts and the label are planted together —
+  the label is derived from what went in, not inferred afterwards.
+- **12 archetypes, all Indian-grounded**: UPI captured but shown as failed,
+  RTO after failed NDR attempts, hub-scan-only delivery, subscription billed
+  after cancellation, admitted-defect-never-refunded, duplicate capture,
+  digital access logs, partial refund disputed in full, festive-surge late
+  delivery.
+- **Deterministic and fingerprinted.** The same inputs always produce
+  byte-identical cases; a content hash of the dataset is folded into the
+  `run_id`, so editing the generator starts a new run rather than silently
+  appending new results to an old confusion matrix.
+- **Stratified split.** The first version shuffled and sliced, which produced
+  a holdout that was 68% defensible against a 60% population — enough to bias
+  every headline number. Now each archetype contributes proportionally, and
+  the holdout matches the population exactly.
+- **Proactive pacing, not just retries.** `src/rate_limiter.py` holds a
+  rolling 60-second token window and waits *before* sending, so the rate limit
+  is mostly never hit rather than hit-and-retried. The agent's existing
+  backoff stays as the safety net.
+- **Resumable by design.** Every case is committed the instant it completes.
+  Ctrl-C finishes the case in flight, marks the run interrupted, and prints
+  the resume command. A resumed run skips completed cases entirely — no lost
+  work, no re-spent budget.
+- **WEAK_CASE is reported both ways.** STRONG maps to defensible and NO_CASE
+  to indefensible, but WEAK genuinely sits between them. Rather than quietly
+  picking one, the report gives the primary mapping, the sensitivity under the
+  opposite mapping, and how many cases actually hinge on it.
+- **Failures are never scored as predictions.** A crashed investigation isn't
+  a correct "no" — failures are reported separately with a coverage figure.
+- **Financial figures say "defended", not "recovered".** Contesting a
+  defensible dispute doesn't guarantee winning it; the issuing bank decides,
+  and there's no win-rate data here to model that with.
+
+```bash
+uv run scripts/run_evaluation.py --split holdout      # the 50-case held-out set
+uv run scripts/run_evaluation.py --split dev          # the 150-case dev set
+uv run scripts/run_evaluation.py --split holdout --limit 5   # smoke test
+uv run scripts/run_evaluation.py --split holdout --report    # metrics only, no API calls
+uv run scripts/run_evaluation.py --list               # past runs
+
+# long runs are best backgrounded
+nohup uv run scripts/run_evaluation.py --split all > eval.log 2>&1 &
+```
+
+## 7i. Failure recovery demonstration (Phase 9)
+
+One script, `scripts/demo_failures.py`, exercises 8 deliberately-injected
+failures against real application code — not new business logic, composition
+of what Phases 1-8 already built. Mocks touch only the true external
+boundary (the razorpay SDK call inside `RazorpayClient`, the `_call_groq`
+call inside `investigation_agent`); everything around that — HMAC
+verification, retry/backoff, schema validation, citation checking, the state
+machine, the deadline guard — is the real code path.
+
+```bash
+uv run scripts/demo_failures.py
+```
+
+1. **Razorpay auth failure** — underlying SDK raises the exact error text
+   observed live in Phase 1; `verify_credentials()` returns
+   `authenticated=False`, no secret ever printed, no exception escapes.
+2. **Tampered webhook signature** — rejected with 400 before JSON parsing;
+   no case row created.
+3. **Duplicate webhook delivery** — first `processed`, second
+   `duplicate_ignored`; exactly one `ingest` audit entry.
+4. **AI transient failure** — `_call_groq` raises `GroqTransientError` twice,
+   the real backoff path recovers on the 3rd attempt.
+5. **Malformed AI output (persistent)** — an invalid classification on every
+   attempt exhausts the retry-with-correction path and fails safe
+   (`INVALID_AI_RESPONSE`); nothing fake is ever persisted.
+6. **Missing merchant evidence** — `NO_MERCHANT_EVIDENCE` returned before the
+   model is even called (asserted via a call-count check on the mock).
+7. **Oversized contest summary** — `build_contest_payload()` refuses a
+   1500-character summary before any client object is constructed.
+8. **Expired dispute deadline** — blocked at `assert_submittable()`, shared
+   by both draft and submit, not only shown as a dashboard banner.
+
+Plus a human-in-the-loop boundary check: `submit_contest()` without
+`human_confirmed=True`, and without a named reviewer, both raise
+`SubmissionBlocked`; a static check confirms the dashboard source contains no
+direct `contest_dispute()` call.
+
+- **A real bug found via the demo itself, not despite it.** The duplicate-
+  webhook scenario initially reused the tampered-signature scenario's exact
+  envelope bytes, which exposed that `record_webhook_receipt()` keyed
+  idempotency on `body_hash` alone — so a webhook rejected once for a bad
+  signature would permanently block a later, genuinely valid delivery of the
+  same body. Fixed: a rejected attempt's row is upgraded on a later valid
+  delivery instead of blocking it; two truly-valid deliveries are still
+  deduplicated exactly as before. See `BUILD_LOG.md` 2026-09-05-01.
+- **Deadline expiry was a UI banner, not a backend guarantee**, until this
+  phase. `assert_submittable()` now checks `respond_by` alongside its
+  existing simulated-dispute check — one shared guard for both draft and
+  submit, not a per-call-site reimplementation.
+- **Safety by construction, verified anyway.** The demo builds a synthetic
+  `Settings` directly (never `load_settings()`, never reads `.env`) pointed
+  entirely at a temp directory, then compares the real
+  `data/merchant/{merchant,cases}.db` file size/mtime before and after the
+  run to confirm they were never touched.
+
 ## 8. Layout
 
 ```
@@ -440,6 +565,10 @@ src/evidence_builder.py      category mapping, contest summary limit pipeline
 src/document_generator.py    evidence PDFs, explanation letter, case report
 src/review_workflow.py       deadline urgency, queue stats, human decisions + audit
 src/contest_service.py       draft/submit, upload idempotency, submission guards
+src/evaluation_dataset.py    200 labelled cases, 12 Indian archetypes, deterministic
+src/evaluation_store.py      resumable run state + per-case checkpoints
+src/evaluation_metrics.py    confusion matrix, P/R/F1, financial exposure
+src/rate_limiter.py          proactive token-budget pacing
 dashboard/app.py             Streamlit review UI (a view over src/, no logic)
 scripts/verify_phase1.py  end-to-end Phase 1 integration check
 scripts/send_test_webhook.py  self-signed local webhook, proves the HMAC pipe
@@ -447,6 +576,8 @@ scripts/run_simulator.py  seed a Simulated Test Dispute without a server
 scripts/seed_merchant_db.py  seed merchant.db (+ matching cases in cases.db)
 scripts/run_investigation.py  run the AI investigator over seeded cases
 scripts/build_evidence.py     build evidence packages + PDFs from investigations
+scripts/run_evaluation.py     resumable, rate-limit-paced evaluation run
+scripts/demo_failures.py      8-scenario failure recovery demonstration
 docs/                    vendored official Razorpay chargeback reason codes
 NOTES.md                 engineering log: problems, causes, decisions
 ```

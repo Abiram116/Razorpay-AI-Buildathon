@@ -544,3 +544,63 @@ def test_contest_with_no_documents_is_refused(settings, approved_real_case):
             save_draft_to_razorpay(case, evidence, package, investigation,
                                    actor="alice", settings=settings, client=client)
     assert get_case(settings.paths.case_db, REAL_DISP).case_state == "APPROVED"
+
+
+# ----------------------------------------------------------------------
+# Phase 9 finding: expired deadline was never actually enforced
+# ----------------------------------------------------------------------
+
+def test_expired_deadline_blocks_submission(settings, approved_real_case):
+    """Found while building the Phase 9 failure demo: assert_submittable
+    never checked respond_by, so a human could submit a contest for a
+    dispute whose deadline had already passed."""
+    case, evidence, package, investigation = approved_real_case
+    expired_case = CaseRecord(
+        dispute_id=case.dispute_id, payment_id=case.payment_id, order_id=case.order_id,
+        amount=case.amount, currency=case.currency, reason_code=case.reason_code,
+        respond_by=int(time.time()) - 3600,  # one hour in the past
+        dispute_status=case.dispute_status, phase=case.phase, case_state=case.case_state,
+        source=case.source, is_simulated=case.is_simulated, ingested_at=case.ingested_at,
+    )
+    with pytest.raises(SubmissionBlocked, match="deadline"):
+        assert_submittable(expired_case)
+
+
+def test_non_expired_deadline_is_not_blocked(settings, approved_real_case):
+    case, evidence, package, investigation = approved_real_case
+    assert_submittable(case)  # respond_by is in the future in the fixture - must not raise
+
+
+def test_expired_case_draft_is_blocked_with_no_network_call(settings, approved_real_case):
+    """The dashboard shows this via build_local_draft's blocked_reason - no
+    dashboard code change was needed because it already surfaces whatever
+    assert_submittable blocks."""
+    case, evidence, package, investigation = approved_real_case
+    expired_case = CaseRecord(
+        dispute_id=case.dispute_id, payment_id=case.payment_id, order_id=case.order_id,
+        amount=case.amount, currency=case.currency, reason_code=case.reason_code,
+        respond_by=int(time.time()) - 3600,
+        dispute_status=case.dispute_status, phase=case.phase, case_state=case.case_state,
+        source=case.source, is_simulated=case.is_simulated, ingested_at=case.ingested_at,
+    )
+    draft = build_local_draft(expired_case, evidence, package, investigation, settings)
+    assert draft.blocked_reason is not None
+    assert "deadline" in draft.blocked_reason.lower()
+    assert not draft.can_submit
+
+
+def test_expired_case_submit_never_reaches_razorpay(settings, approved_real_case):
+    case, evidence, package, investigation = approved_real_case
+    expired_case = CaseRecord(
+        dispute_id=case.dispute_id, payment_id=case.payment_id, order_id=case.order_id,
+        amount=case.amount, currency=case.currency, reason_code=case.reason_code,
+        respond_by=int(time.time()) - 3600,
+        dispute_status=case.dispute_status, phase=case.phase, case_state=case.case_state,
+        source=case.source, is_simulated=case.is_simulated, ingested_at=case.ingested_at,
+    )
+    client = _mock_client()
+    with pytest.raises(SubmissionBlocked):
+        submit_contest(expired_case, evidence, package, investigation, actor="alice",
+                       human_confirmed=True, settings=settings, client=client)
+    client.contest_dispute.assert_not_called()
+    client.upload_evidence_document.assert_not_called()

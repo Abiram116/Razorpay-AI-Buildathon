@@ -65,7 +65,23 @@ submission.
     for the billing_proof fix immediately caught that customer_communication
     had the identical gap, masked in the demo data by a coincidence. See
     entry 2026-09-03-01.
-11. **LLM output is not ASCII, and it broke the human-facing deliverable.**
+11. **A 50-case held-out set that didn't represent its own population.**
+    Shuffle-and-slice produced a holdout that was 68% defensible against a 60%
+    population — enough to bias every metric computed from it. Caught only
+    because the harness prints its own dataset composition on every run. See
+    entry 2026-09-04-01.
+12. **A rejected webhook could permanently poison a real one's delivery.**
+    An invalid-signature attempt and a later genuinely-valid delivery of the
+    same body shared one idempotency key, so the real delivery would be
+    silently dropped as a "duplicate" of an attempt that was never actually
+    accepted — found by a failure-demo scenario that happened to reuse test
+    data across two "unrelated" cases. See entry 2026-09-05-01.
+13. **The one-command launcher silently ate its own status output.**
+    `os.execvp()` discards whatever stdout Python had buffered, invisibly,
+    exactly under the condition (output redirected, not a live terminal)
+    that a background/demo launcher is normally run in. See entry
+    2026-09-05-02.
+14. **LLM output is not ASCII, and it broke the human-facing deliverable.**
    Groq's reasoning contained typographic Unicode (non-breaking hyphens, en
    dashes, narrow spaces) outside reportlab's Latin-1 font range, rendering
    as literal black boxes in the PDF a reviewer has to read and approve. The
@@ -632,3 +648,143 @@ sent" is what made that possible.
 
 **Status.** Resolved and verified — `draft.unsupported_categories` is now
 empty on the case that originally showed the warning; full suite 171 passed.
+
+## 2026-09-04-01 — Phase 8 — The held-out set didn't represent the population it was sampled from
+
+**Problem / obstacle.** First smoke run of the evaluation harness printed its
+dataset composition and the holdout split came back **68% defensible against a
+60% population**. Every headline number — precision, recall, F1, the whole
+financial model — would have been computed on a set that quietly over-weighted
+the cases the merchant tends to win.
+
+**What caused it.** I split the dataset the obvious way: seeded shuffle, take
+the first 50 for holdout, rest for dev. That's fine at large N. At 50 cases
+drawn from 12 archetypes it isn't — random slicing drifts, and there's nothing
+in a shuffle that keeps the class balance of the slice anywhere near the class
+balance of the whole. The dev/holdout labels were assigned by position, so the
+drift was invisible unless something actually printed the composition of each
+split separately.
+
+**How I investigated it.** The harness prints dataset composition at startup,
+so the 68% appeared on the first real run against the 60% figure I'd already
+verified for the full set. Comparing `dataset_summary()` over the full set vs.
+the holdout slice confirmed it immediately — the generator was fine, the split
+was not.
+
+**Solution / fix.** Stratified the split by archetype: each archetype
+contributes a proportional share to the holdout, largest archetypes allocated
+first so rounding leftovers distort the proportions least, then a correction
+pass to hit the exact requested holdout size. Holdout now matches the
+population at 60.0% vs 60.0% and covers all 12 archetypes.
+
+While fixing it I closed a related hole: the `run_id` was derived from
+`(dataset_version, split, model)` only, so editing the generator would have
+kept the same run id and silently appended new results to a stored confusion
+matrix built from different cases. It now includes a content fingerprint of
+the dataset, so changing generation starts a new run instead.
+
+**What I changed in the code.** `src/evaluation_dataset.py`: stratified split
+plus `dataset_fingerprint()`. `src/evaluation_store.py`: `make_run_id()` takes
+the fingerprint. `scripts/run_evaluation.py`: passes it through and prints it.
+
+**What I learned.** "Shuffle and slice" is the default mental model for a
+train/test split and it's wrong at small N — a 50-case evaluation set needs
+stratification or it isn't measuring the distribution you think it is. Also
+worth noting: I only caught this because the harness prints its own dataset
+composition on every run. If it had just printed "50 cases" I'd have shipped
+biased numbers and never known.
+
+**Status.** Resolved and verified — holdout matches the population exactly
+(60.0%/60.0%), spans all 12 archetypes, and there's a test asserting the two
+stay within 4 percentage points of each other.
+
+## 2026-09-05-01 — Phase 9 — A rejected webhook could permanently poison a real one's delivery
+
+**Problem / obstacle.** Building the duplicate-webhook demo scenario, I
+initially reused the same signed envelope bytes from the tampered-signature
+scenario immediately before it. The "send a valid webhook twice" scenario
+came back with the FIRST delivery already marked `duplicate_ignored` -
+meaning a webhook that had never actually been accepted was being treated as
+already processed.
+
+**What caused it.** `record_webhook_receipt()` used `body_hash` as a hard
+SQLite primary key and treated any second INSERT against that hash as a
+duplicate - full stop, regardless of whether the row it collided with was
+ever a *successful* delivery. An earlier attempt rejected for an invalid
+signature still occupies that primary key. So: attacker (or a tool) replays
+a forged or leaked copy of a webhook body with a wrong signature -> correctly
+rejected, but its body_hash is now recorded. Razorpay's real, correctly-signed
+delivery of that exact same event arrives later (a legitimate retry, or
+recovery after our webhook secret was briefly misconfigured during a
+rotation) -> same body_hash -> silently treated as a duplicate and dropped.
+The real dispute would never be ingested, with no error anywhere.
+
+**How I investigated it.** The demo scenario's own assertions caught it
+immediately (`first == 'processed'` failed), but I didn't stop at "fix the
+demo's test data" - traced it back through `webhook_handler.py` to confirm
+`record_webhook_receipt` really does key on `body_hash` alone with no
+distinction for whether the existing row was ever validated, which is the
+actual bug the demo data had merely exposed by accident.
+
+**Solution / fix.** An invalid-signature attempt is still recorded (I want
+that for security visibility), but it no longer *blocks* a later, genuinely
+valid delivery of the same bytes - a signature-valid receipt for a body_hash
+whose only prior record was rejected now upgrades that row in place, rather
+than being refused as a repeat. Two truly-valid deliveries of the same body
+are, correctly, still deduplicated exactly as before.
+
+**What I changed in the code.** `src/database.py`: `record_webhook_receipt()`
+now reads the existing row (if any) before deciding whether to insert,
+upgrade, or reject as a true duplicate, instead of relying on
+`sqlite3.IntegrityError` to distinguish every case.
+
+**What I learned.** A demo script that reused test data casually across two
+"unrelated" scenarios accidentally became the thing that caught a real
+correctness bug - the two scenarios interacting is exactly what surfaced
+that idempotency and signature-rejection shouldn't share a keyspace. Worth
+remembering: coincidental data reuse in a test/demo isn't only a nuisance to
+route around, it can be a signal.
+
+**Status.** Resolved and verified — new regression tests confirm a rejected
+attempt no longer blocks a later valid delivery of the same body, while two
+genuinely valid deliveries are still deduplicated. Full suite green (219
+passed). The Phase 9 demo's duplicate-webhook scenario now correctly shows
+`first=processed, second=duplicate_ignored`.
+
+## 2026-09-05-02 — Phase 10 — `os.execvp()` silently swallowed every status message
+
+**Problem / obstacle.** `run.py`'s whole point is to be one honest command:
+seed if needed, then launch the dashboard, Ctrl-C stops both. First
+end-to-end run under `nohup ... > log 2>&1` produced a log file that started
+directly with Streamlit's own banner — every one of my own `print()` status
+lines ("Demo data already exists...", "Starting dashboard...") had vanished.
+
+**What caused it.** `os.execvp()` replaces the current process image in
+place. It does not flush whatever Python's stdout had buffered before the
+call — that buffered data is simply gone, because the process that owned it
+no longer exists once exec completes. Python's stdout is block-buffered by
+default whenever it isn't attached to a live terminal (a redirect, a pipe, a
+`nohup`), which is exactly how this script is meant to be run.
+
+**How I investigated it.** Ran it live, redirected to a file exactly as a
+real user would with `nohup`, and read the file back - it was missing lines
+I knew the script printed. Isolated it immediately to the one function using
+`os.execvp()`, since every other print in the codebase behaves normally.
+
+**Solution / fix.** One `sys.stdout.flush()` immediately before the
+`os.execvp()` call.
+
+**What I changed in the code.** `run.py`: explicit flush before exec, with a
+comment explaining why it's there - the failure mode is easy to reintroduce
+by accident (e.g. adding a print after the flush) without realising it.
+
+**What I learned.** `os.execvp()`'s "replace this process" semantics are a
+sharp edge specifically for buffered output: it's invisible when running
+interactively (a TTY flushes on newline) and only shows up under redirection
+- exactly the condition a background/demo launcher is designed for. Worth
+testing the actual intended invocation (`nohup ... > file`), not just running
+it interactively where the bug doesn't show.
+
+**Status.** Resolved and verified — re-ran under the same redirected
+conditions; both status lines now appear in the log before the dashboard
+starts.

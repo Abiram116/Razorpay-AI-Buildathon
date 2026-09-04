@@ -1,0 +1,127 @@
+{
+  "cases_total": 50,
+  "cases_scored": 50,
+  "cases_failed": 0,
+  "coverage": 1.0,
+  "failure_reasons": {},
+  "classification_counts": {
+    "NO_CASE": 21,
+    "STRONG_CASE": 27,
+    "WEAK_CASE": 2
+  },
+  "weak_case_count": 2,
+  "primary_weak_mapping": "defensible",
+  "metrics": {
+    "true_positive": 29,
+    "false_positive": 0,
+    "false_negative": 1,
+    "true_negative": 20,
+    "precision": 1.0,
+    "recall": 0.9667,
+    "f1": 0.9831,
+    "accuracy": 0.98,
+    "false_positive_rate": 0.0,
+    "false_negative_rate": 0.0333
+  },
+  "sensitivity_weak_as_indefensible": {
+    "true_positive": 27,
+    "false_positive": 0,
+    "false_negative": 3,
+    "true_negative": 20,
+    "precision": 1.0,
+    "recall": 0.9,
+    "f1": 0.9474,
+    "accuracy": 0.94,
+    "false_positive_rate": 0.0,
+    "false_negative_rate": 0.1
+  },
+  "financial_impact": {
+    "amount_defended_minor": 9732100,
+    "amount_wrongly_contested_minor": 0,
+    "amount_missed_minor": 699900,
+    "amount_correctly_dropped_minor": 6743000,
+    "operational_cost_minor": 25000,
+    "manual_baseline_cost_minor": 1250000,
+    "currency": "INR",
+    "note": "amount_defended is money put forward for contest, NOT money recovered - the issuing bank decides the outcome and no win-rate is modelled here. Cost figures come from the TUNABLES block in src/config.py and are assumptions, not published Razorpay fees."
+  },
+  "per_archetype": {
+    "admitted_defect_unresolved": {
+      "n": 4,
+      "correct": 4,
+      "accuracy": 1.0,
+      "ground_truth": "INDEFENSIBLE"
+    },
+    "charged_after_cancellation": {
+      "n": 2,
+      "correct": 2,
+      "accuracy": 1.0,
+      "ground_truth": "INDEFENSIBLE"
+    },
+    "delivered_and_admitted": {
+      "n": 7,
+      "correct": 7,
+      "accuracy": 1.0,
+      "ground_truth": "DEFENSIBLE"
+    },
+    "delivered_late_after_complaint": {
+      "n": 4,
+      "correct": 4,
+      "accuracy": 1.0,
+      "ground_truth": "DEFENSIBLE"
+    },
+    "digital_access_proven": {
+      "n": 5,
+      "correct": 5,
+      "accuracy": 1.0,
+      "ground_truth": "DEFENSIBLE"
+    },
+    "duplicate_charge_confirmed": {
+      "n": 4,
+      "correct": 4,
+      "accuracy": 1.0,
+      "ground_truth": "INDEFENSIBLE"
+    },
+    "hub_scan_only": {
+      "n": 2,
+      "correct": 2,
+      "accuracy": 1.0,
+      "ground_truth": "INDEFENSIBLE"
+    },
+    "never_shipped_ignored": {
+      "n": 4,
+      "correct": 4,
+      "accuracy": 1.0,
+      "ground_truth": "INDEFENSIBLE"
+    },
+    "partial_refund_disputed_full": {
+      "n": 4,
+      "correct": 3,
+      "accuracy": 0.75,
+      "ground_truth": "DEFENSIBLE"
+    },
+    "refund_already_processed": {
+      "n": 4,
+      "correct": 4,
+      "accuracy": 1.0,
+      "ground_truth": "DEFENSIBLE"
+    },
+    "rto_unrefunded": {
+      "n": 4,
+      "correct": 4,
+      "accuracy": 1.0,
+      "ground_truth": "INDEFENSIBLE"
+    },
+    "upi_captured_claimed_failed": {
+      "n": 6,
+      "correct": 6,
+      "accuracy": 1.0,
+      "ground_truth": "DEFENSIBLE"
+    }
+  },
+  "mean_confidence": 0.9288,
+  "latency_ms": {
+    "median": 15535,
+    "max": 25191
+  }
+}

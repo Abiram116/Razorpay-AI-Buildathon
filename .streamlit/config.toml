@@ -1,0 +1,6 @@
+# Presentation-only. No effect on application logic or safety behavior.
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false

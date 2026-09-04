@@ -27,6 +27,7 @@ its stored `doc_...` id instead of creating a duplicate at Razorpay.
 from __future__ import annotations
 
 import logging
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -89,13 +90,22 @@ class ContestDraft:
         return self.blocked_reason is None and bool(self.document_ids_by_category)
 
 
-def assert_submittable(case: CaseRecord) -> None:
+def assert_submittable(case: CaseRecord, *, now: int | None = None) -> None:
     """Backend guard. Raises unless this dispute may legitimately be sent.
 
     A simulated dispute has no counterpart at Razorpay - its id is
     `sim_disp_...`, which the client's id validation would reject anyway.
     Blocking it explicitly here, with a clear reason, is better than relying
     on a downstream validation error to accidentally do the right thing.
+
+    Found while building the Phase 9 failure demo: the dashboard only ever
+    showed a "DEADLINE EXPIRED" banner (dashboard/app.py) - it never actually
+    disabled the submit button, and this function never checked the deadline
+    at all. A human could still click submit on a case whose respond_by had
+    already passed. Razorpay would very likely reject that submission on its
+    own, but this code shouldn't attempt an action it already knows is
+    pointless - that's the same "fail before the network call, not after"
+    principle the summary-length and simulated-dispute checks already use.
     """
     if case.is_simulated:
         raise SubmissionBlocked(
@@ -106,6 +116,14 @@ def assert_submittable(case: CaseRecord) -> None:
         raise SubmissionBlocked(
             f"{case.dispute_id} did not arrive from a verified Razorpay webhook "
             f"(source={case.source!r}). Refusing to contest it."
+        )
+    now = now if now is not None else int(time.time())
+    if case.respond_by <= now:
+        raise SubmissionBlocked(
+            f"{case.dispute_id}'s response deadline (respond_by) has already "
+            "passed. Razorpay will not accept a contest after the deadline, "
+            "so this is refused before any API call is made. Route to manual "
+            "handling."
         )
 
 

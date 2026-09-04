@@ -377,3 +377,95 @@ document upload (unlike the final `contest` call) genuinely can be proven
 live without ever creating a test dispute - which nothing can do, including
 Razorpay itself. Verified against the real API: returned a genuine
 `doc_TXTlCx4drZ3vSD`.
+
+## Phase 8 — Evaluation
+
+### N-033 — The dataset is generated in Python, deliberately not by an LLM
+Two reasons. Generating 200 cases through Groq would burn exactly the
+rate-limit budget the evaluation needs. More importantly, if a model writes
+the case and a model grades it, the ground truth is only as good as the
+generator - the label would be inferred from the case rather than planted
+with it. Here each archetype plants a specific situation and its correct
+label together, so the answer key is a property of construction, not a guess.
+There's a test asserting no archetype ever produces mixed labels.
+
+### N-034 — Proactive pacing beats reactive backoff for a long run
+The agent's existing 429 backoff (BUILD_LOG 2026-09-02-08) is the right
+safety net but the wrong primary strategy across 200 calls: every 429 is a
+wasted round trip. `src/rate_limiter.py` holds a rolling 60-second token
+window and waits BEFORE sending, at 80% of the measured 8,000 TPM budget.
+The backoff stays in place underneath for anything the estimate misses.
+Token estimates are deliberately pessimistic (3.6 chars/token rather than the
+truer ~4) - over-estimating costs idle seconds, under-estimating costs a
+rate-limit error plus its retry.
+
+### N-035 — WEAK_CASE is a measurement decision, so it's reported both ways
+STRONG maps to defensible and NO_CASE to indefensible with no ambiguity, but
+WEAK genuinely sits between them and its recommended_action is usually
+MANUAL_REVIEW. Mapping it either way moves precision and recall. Rather than
+pick one silently, `compute_metrics` reports the primary mapping, the full
+sensitivity under the opposite mapping, and the count of cases that actually
+hinge on it - so the reader can see how much of the headline number is a
+modelling choice rather than a result.
+
+### N-036 — Failed investigations are never scored as predictions
+An investigation that crashed is not a correct "don't contest". Failures are
+excluded from the confusion matrix and reported separately alongside a
+coverage figure, so a model that fell over on half the set can't look
+conservative-but-accurate. Similarly the financial model reports
+`amount_defended` (money put forward for contest), never "recovered" - the
+issuing bank decides the outcome and there's no win-rate data here to model
+that with.
+
+## Phase 9 — Failure Recovery Demonstration
+
+### N-037 — `scripts/demo_failures.py` reuses real code, mocks only the true boundary
+Every one of the 8 scenarios calls the actual application functions
+(`webhook_handler.app` via a real `TestClient`, `investigate_dispute`,
+`contest_service.assert_submittable`/`build_local_draft`/`submit_contest`,
+`review_workflow.deadline_status`). The only things ever mocked are the
+underlying `razorpay` SDK method inside `RazorpayClient` and the `_call_groq`
+function inside `investigation_agent` - the two literal points where this
+codebase talks to the outside world. No business logic is duplicated in the
+demo script; it is entirely composition of Phase 1-8 code under controlled
+failure injection.
+
+### N-038 — Deadline expiry was a UI banner, not a backend guarantee
+Confirmed before writing scenario 8: `dashboard/app.py` showed a "DEADLINE
+EXPIRED" warning, but neither it nor `contest_service.py` actually stopped a
+submit click from reaching `submit_contest()`. Fixed by adding the check to
+`assert_submittable()` (the same function that already blocks simulated
+disputes), so it's enforced once, at the layer both draft and submit share -
+not reimplemented per call site, and not left as a UI-only warning a human
+could click past.
+
+### N-039 — Every scenario runs in a throwaway temp directory
+`scripts/demo_failures.py` builds its own synthetic `Settings` object
+directly (`Settings(razorpay=RazorpayConfig(...), ...)`), never calling
+`load_settings()` and never reading `.env`. Every path points into a
+`tempfile.TemporaryDirectory()`. The script verifies this at the end by
+comparing the real `data/merchant/{merchant,cases}.db` file size and mtime
+before and after the run - belt-and-suspenders on top of the fact that the
+script never references those paths at all.
+
+## Phase 10 — Presentation Polish
+
+### N-040 — `run.py`: one command, one process, by construction
+`run.py` seeds (only if `merchant.db`/`cases.db` don't already exist, or
+`--reset` is passed) via a normal subprocess that runs to completion, THEN
+calls `os.execvp()` to replace itself with Streamlit. There is deliberately
+no wrapper process supervising a child: after the exec, the PID that was
+`run.py` literally *is* Streamlit. Ctrl-C stops it, and there is nothing else
+that could be left running - not because of signal-forwarding logic, but
+because there is only ever one process to begin with.
+
+### N-041 — Screenshots via a user-space library extraction, no root needed
+Headless Chromium needed `libnspr4`, `libnss3`, `libnssutil3`, `libasound2`
+and the Noto Color Emoji font, none available and no `sudo` in this
+environment. `apt-get download <pkg>` (not `install`) fetches the `.deb`
+without root, and `dpkg-deb -x` extracts it to an arbitrary directory.
+Pointing `LD_LIBRARY_PATH` at the extracted `usr/lib/x86_64-linux-gnu` and
+copying the font into `~/.local/share/fonts` was enough to get Chromium
+running and rendering emoji correctly - entirely in user space. Also added
+`.streamlit/config.toml` (`toolbarMode = "minimal"`, `gatherUsageStats =
+false`) purely for a cleaner captured UI - configuration only, no app code.

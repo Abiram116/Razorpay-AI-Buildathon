@@ -69,6 +69,40 @@ def test_webhook_receipt_idempotency(db_path):
     assert second is False
 
 
+def test_invalid_signature_does_not_poison_a_later_valid_delivery(db_path):
+    """Phase 9 finding: an earlier attempt with a bad signature (an attacker's
+    replay, or a momentarily-wrong webhook secret during rotation) must not
+    permanently block a later genuinely-valid delivery of the same body -
+    that would silently drop a real dispute forever."""
+    rejected = database.record_webhook_receipt(
+        db_path, "shared_hash", "payment.dispute.created", None, False
+    )
+    accepted = database.record_webhook_receipt(
+        db_path, "shared_hash", "payment.dispute.created", "disp_Real", True
+    )
+    assert rejected is True   # recorded, for security visibility
+    assert accepted is True   # NOT treated as a duplicate of the rejected attempt
+
+
+def test_two_invalid_signature_attempts_are_still_deduplicated(db_path):
+    """The upgrade path is one-directional: two bad-signature attempts for the
+    same body are still just one recorded rejection, not two."""
+    first = database.record_webhook_receipt(db_path, "bad_hash", "unknown", None, False)
+    second = database.record_webhook_receipt(db_path, "bad_hash", "unknown", None, False)
+    assert first is True
+    assert second is False
+
+
+def test_a_second_valid_delivery_after_an_upgrade_is_a_true_duplicate(db_path):
+    """Once a body_hash has been upgraded to valid, it behaves exactly like
+    any other validated receipt - a further identical delivery is a real
+    duplicate and must still be ignored."""
+    database.record_webhook_receipt(db_path, "h", "payment.dispute.created", "disp_X", False)
+    database.record_webhook_receipt(db_path, "h", "payment.dispute.created", "disp_X", True)
+    third = database.record_webhook_receipt(db_path, "h", "payment.dispute.created", "disp_X", True)
+    assert third is False
+
+
 def test_simulated_case_flagged_correctly(db_path):
     record = database.ingest_case(db_path, _case(dispute_id="disp_SIMTEST0000AA", source="simulated"), actor="sim")
     assert record.is_simulated is True

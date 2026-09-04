@@ -17,13 +17,20 @@ __pycache__/
 *.sqlite
 *.sqlite3
 *.log
+*.pid
+nohup.out
 logs/
 data/generated/*
 !data/generated/.gitkeep
 
+# Stray downloads from local debugging (e.g. `apt-get download` while
+# working around a missing system library) - never meant to be committed.
+*.deb
+
 # --- OS / editor ---
 .DS_Store
 .idea/
+*.swp
 
 # Share the project's VS Code config; ignore per-user cruft.
 .vscode/*

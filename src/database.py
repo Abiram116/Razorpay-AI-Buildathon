@@ -180,17 +180,44 @@ def record_webhook_receipt(
     db_path: Path, body_hash: str, event_type: str, dispute_id: str | None, signature_valid: bool
 ) -> bool:
     """Record a webhook delivery attempt. Returns False if it's a duplicate
-    (already recorded), in which case the caller must not reprocess it."""
+    of an already-VALIDATED delivery, in which case the caller must not
+    reprocess it.
+
+    Found while building the Phase 9 failure demo: a body_hash rejected once
+    for a bad signature used to permanently occupy that primary key, so a
+    later genuinely-valid delivery of byte-identical content (Razorpay
+    retrying after our webhook secret was momentarily wrong during a
+    rotation, or an attacker replaying a leaked/guessed body to pre-poison a
+    real event) would be silently treated as a duplicate and dropped -
+    exactly the "silently drop a real Razorpay dispute" outcome the rest of
+    this codebase goes out of its way to avoid. An invalid-signature attempt
+    is still recorded (security visibility), but it no longer blocks a
+    later, real, correctly-signed delivery of the same bytes: that
+    "upgrades" the existing row instead of being rejected as a repeat.
+    """
+    now = int(time.time())
     with connection(db_path) as conn:
-        try:
+        existing = conn.execute(
+            "SELECT signature_valid FROM webhook_events WHERE body_hash = ?", (body_hash,)
+        ).fetchone()
+
+        if existing is None:
             conn.execute(
                 "INSERT INTO webhook_events (body_hash, event_type, dispute_id, "
                 "signature_valid, received_at, processed) VALUES (?, ?, ?, ?, ?, 0)",
-                (body_hash, event_type, dispute_id, int(signature_valid), int(time.time())),
+                (body_hash, event_type, dispute_id, int(signature_valid), now),
             )
             return True
-        except sqlite3.IntegrityError:
-            return False
+
+        if not existing["signature_valid"] and signature_valid:
+            conn.execute(
+                "UPDATE webhook_events SET signature_valid = 1, event_type = ?, "
+                "dispute_id = ?, received_at = ? WHERE body_hash = ?",
+                (event_type, dispute_id, now, body_hash),
+            )
+            return True
+
+        return False
 
 
 def mark_webhook_processed(db_path: Path, body_hash: str) -> None:
